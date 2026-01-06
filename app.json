@@ -4,7 +4,7 @@
     "slug": "flowfly",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./src/assets/Logo_Flowfly_icon_bg.jpg",
     "scheme": "flowfly",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
