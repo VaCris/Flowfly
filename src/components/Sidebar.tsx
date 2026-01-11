@@ -1,77 +1,111 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import Logo from '../assets/Logo_Flowfly_icon.png';
+import {
+    Image,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
+
 import { Colors } from '../constants/Colors';
 
+const LogoImage = require('../assets/Logo_Flowfly_icon.png');
+
 interface MenuItem {
+    id: string;
     icon: keyof typeof Ionicons.glyphMap;
     label: string;
-    active: boolean;
 }
 
-const MenuSection = ({ title, items }: { title: string, items: MenuItem[] }) => (
-    <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {items.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.menuItem}>
+interface SidebarProps {
+    onClose?: () => void;
+    isMobile?: boolean;
+    activeTab?: string;
+    onTabChange?: (tab: string) => void;
+}
+
+export const Sidebar = ({ onClose, isMobile = false, activeTab = 'home', onTabChange }: SidebarProps) => {
+
+    const handlePress = (tabId: string) => {
+        if (onTabChange) onTabChange(tabId);
+        if (isMobile && onClose) onClose();
+    };
+
+    const renderMenuItem = (item: MenuItem) => {
+        const isActive = activeTab === item.id;
+        return (
+            <TouchableOpacity
+                key={item.id}
+                style={styles.menuItem}
+                onPress={() => handlePress(item.id)}
+            >
                 <Ionicons
-                    name={item.icon}
-                    size={22}
-                    color={item.active ? Colors.primary : Colors.textDim}
+                    name={isActive ? item.icon : (item.icon + '-outline') as any}
+                    size={24}
+                    color={isActive ? Colors.text : Colors.textDim}
                 />
                 <Text style={[
                     styles.menuLabel,
-                    item.active && { color: Colors.text, fontWeight: '600' }
+                    isActive && { color: Colors.text, fontWeight: '700' }
                 ]}>
                     {item.label}
                 </Text>
-                {item.active && <View style={styles.activeIndicator} />}
+                {isActive && <View style={styles.activeIndicator} />}
             </TouchableOpacity>
-        ))}
-    </View>
-);
+        );
+    };
 
-export const Sidebar = () => {
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, isMobile && styles.mobileContainer]}>
+
             <View style={styles.logoArea}>
                 <Image
-                    source={Logo}
-                    style={{ width: 70, height: 75}} 
-
+                    source={LogoImage}
+                    style={{ width: 40, height: 40, marginRight: 10 }}
+                    resizeMode="contain"
                 />
-
                 <Text style={styles.logoText}>Flowfly</Text>
+
+                {isMobile && (
+                    <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                        <Ionicons name="close" size={28} color="white" />
+                    </TouchableOpacity>
+                )}
             </View>
 
-            <View style={styles.searchContainer}>
-                <Ionicons name="search" size={20} color={Colors.textDim} style={styles.searchIcon} />
-                <TextInput
-                    placeholder="Search"
-                    placeholderTextColor={Colors.textDim}
-                    style={styles.searchInput}
-                />
-            </View>
+            {!isMobile && (
+                <View style={styles.searchContainer}>
+                    <Ionicons name="search" size={20} color={Colors.textDim} style={styles.searchIcon} />
+                    <TextInput
+                        placeholder="Search"
+                        placeholderTextColor={Colors.textDim}
+                        style={styles.searchInput}
+                        onFocus={() => handlePress('search')}
+                    />
+                </View>
+            )}
 
             <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-                <MenuSection title="Menu" items={[
-                    { icon: 'home', label: 'Home', active: true },
-                    { icon: 'play-circle-outline', label: 'Playlists', active: false },
-                    { icon: 'person-outline', label: 'Artists', active: false },
-                    { icon: 'headset-outline', label: 'Composers', active: false },
-                ]} />
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Menu</Text>
+                    {[
+                        { id: 'home', icon: 'home', label: 'Home' },
+                        { id: 'search', icon: 'search', label: 'Search' },
+                        { id: 'library', icon: 'library', label: 'Library' },
+                    ].map((item) => renderMenuItem(item as MenuItem))}
+                </View>
 
-                <MenuSection title="Library" items={[
-                    { icon: 'albums-outline', label: 'Albums', active: false },
-                    { icon: 'musical-notes-outline', label: 'Songs', active: false },
-                    { icon: 'film-outline', label: 'Music Videos', active: false },
-                ]} />
-
-                <MenuSection title="Other" items={[
-                    { icon: 'settings-outline', label: 'Settings', active: false },
-                    { icon: 'log-out-outline', label: 'Log out', active: false },
-                ]} />
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Library</Text>
+                    {[
+                        { id: 'create', icon: 'add-circle', label: 'Create Playlist' },
+                        { id: 'liked', icon: 'heart', label: 'Liked Songs' },
+                    ].map((item) => renderMenuItem(item as MenuItem))}
+                </View>
             </ScrollView>
         </View>
     );
@@ -81,21 +115,30 @@ const styles = StyleSheet.create({
     container: {
         width: 260,
         backgroundColor: Colors.sidebar,
-        padding: 30,
+        padding: 24,
         height: '100%',
         borderRightWidth: 1,
         borderRightColor: '#1F1F1F',
     },
+    mobileContainer: {
+        width: '100%',
+        borderRightWidth: 0,
+        paddingTop: 50,
+        backgroundColor: '#000',
+    },
     logoArea: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
         marginBottom: 30,
     },
     logoText: {
         color: Colors.text,
-        fontSize: 28,
-        fontWeight: '500',
+        fontSize: 24,
+        fontWeight: 'bold',
+        flex: 1,
+    },
+    closeBtn: {
+        padding: 5,
     },
     searchContainer: {
         flexDirection: 'row',
@@ -104,7 +147,7 @@ const styles = StyleSheet.create({
         borderRadius: 25,
         paddingHorizontal: 15,
         height: 45,
-        marginBottom: 40,
+        marginBottom: 30,
     },
     searchIcon: { marginRight: 10 },
     searchInput: {
@@ -112,18 +155,18 @@ const styles = StyleSheet.create({
         color: Colors.text,
         fontSize: 14,
         height: '100%',
-        //outlineStyle: 'none',
         ...Platform.select({
             web: { outlineStyle: 'none' } as any
         }),
     },
-    section: { marginBottom: 35 },
+    section: { marginBottom: 30 },
     sectionTitle: {
         color: Colors.textDim,
         fontSize: 12,
         fontWeight: '600',
         marginBottom: 15,
-        textTransform: 'capitalize',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
     menuItem: {
         flexDirection: 'row',
@@ -133,14 +176,16 @@ const styles = StyleSheet.create({
     },
     menuLabel: {
         color: Colors.textDim,
-        fontSize: 15,
-        fontWeight: '500',
+        fontSize: 16,
+        fontWeight: '600',
     },
     activeIndicator: {
         position: 'absolute',
-        right: -30,
-        width: 3,
-        height: 20,
+        right: -24,
+        width: 4,
+        height: 24,
         backgroundColor: Colors.primary,
+        borderTopLeftRadius: 4,
+        borderBottomLeftRadius: 4,
     }
 });
