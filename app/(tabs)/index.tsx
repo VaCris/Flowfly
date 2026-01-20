@@ -1,7 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useEffect, useState } from 'react';
-import { FlatList, Modal, Platform, Pressable, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import {
+  FlatList,
+  Modal,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View
+} from 'react-native';
 
 import { RightSidebar } from '../../src/components/RightSidebar';
 import { Sidebar } from '../../src/components/Sidebar';
@@ -33,11 +45,13 @@ const PlaceholderView = ({ title, onOpenSidebar }: { title: string, onOpenSideba
 );
 
 export default function HomeScreen() {
-  const { width } = useWindowDimensions();
-  const isDesktop = width > 1000;
+  const { width, height } = useWindowDimensions();
+  const isDesktop = width >= 1024;
+  const isTabletOrWebSplit = width >= 600 && width < 1024;
 
   const [activeTab, setActiveTab] = useState('home');
   const [selectedItem, setSelectedItem] = useState<any>(null);
+
   const [isSidebarVisible, setSidebarVisible] = useState(false);
   const [isRightSidebarVisible, setRightSidebarVisible] = useState(false);
   const [isDevicePickerVisible, setDevicePickerVisible] = useState(false);
@@ -63,14 +77,19 @@ export default function HomeScreen() {
 
   const openDetail = (item: any) => { setSelectedItem(item); };
 
+  const contentPaddingTop = Platform.OS === 'web' ? 20 : 0;
+  const contentMaxWidth = isDesktop ? 1600 : '100%';
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#121212" />
+
       <View style={styles.container}>
+        {(isDesktop || (Platform.OS === 'web' && isTabletOrWebSplit)) && (
+          <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        )}
 
-        {isDesktop && <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />}
-
-        {!isDesktop && (
+        {!isDesktop && !(Platform.OS === 'web' && isTabletOrWebSplit) && (
           <Modal
             animationType="fade"
             transparent
@@ -85,101 +104,103 @@ export default function HomeScreen() {
         )}
 
         <View style={styles.mainContent}>
+          <View style={[styles.webWrapper, { maxWidth: contentMaxWidth, paddingTop: contentPaddingTop }]}>
 
-          {selectedItem ? (
-            <AlbumDetailView
-              item={selectedItem}
-              onBack={() => setSelectedItem(null)}
-              onPlay={() => handlePlayTrack(selectedItem)}
-              isPlaying={isPlaying}
-              currentTrack={track}
-            />
-          ) : (
-            <>
-              {/* --- PESTAÑA HOME --- */}
-              {activeTab === 'home' && (
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 180 }}>
-                  <View style={styles.headerRow}>
-                    <Pressable onPress={() => setSidebarVisible(true)} style={styles.profileIcon}>
-                      <Text style={{ color: 'black', fontWeight: 'bold' }}>F</Text>
-                    </Pressable>
-                    <View style={styles.filterContainer}>
-                      <FilterPill label="All" active />
-                      <FilterPill label="Music" />
-                      <FilterPill label="Podcasts" />
-                    </View>
-                  </View>
-
-                  <View style={styles.gridContainer}>
-                    {recentTracks.slice(0, 6).map((item) => (
-                      <View key={item.id} style={{ width: '48%', marginBottom: 8 }}>
-                        <GridCard item={item} onPress={() => openDetail(item)} />
+            {selectedItem ? (
+              <AlbumDetailView
+                item={selectedItem}
+                onBack={() => setSelectedItem(null)}
+                onPlay={() => handlePlayTrack(selectedItem)}
+                isPlaying={isPlaying}
+                currentTrack={track}
+              />
+            ) : (
+              <>
+                {activeTab === 'home' && (
+                  <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 180, paddingHorizontal: 16 }}>
+                    <View style={styles.headerRow}>
+                      {(!isDesktop && !(Platform.OS === 'web' && isTabletOrWebSplit)) && (
+                        <Pressable onPress={() => setSidebarVisible(true)} style={styles.profileIcon}>
+                          <Text style={{ color: 'black', fontWeight: 'bold' }}>F</Text>
+                        </Pressable>
+                      )}
+                      <View style={styles.filterContainer}>
+                        <FilterPill label="All" active />
+                        <FilterPill label="Music" />
+                        <FilterPill label="Podcasts" />
                       </View>
-                    ))}
+                    </View>
+
+                    <View style={styles.gridContainer}>
+                      {recentTracks.slice(0, 6).map((item) => (
+                        <View key={item.id} style={{
+                          width: isDesktop ? '32%' : (isTabletOrWebSplit ? '48%' : '48%'),
+                          marginBottom: 8
+                        }}>
+                          <GridCard item={item} onPress={() => openDetail(item)} />
+                        </View>
+                      ))}
+                    </View>
+
+                    <Text style={styles.sectionTitle}>New Releases</Text>
+                    <FlatList
+                      horizontal
+                      data={recentTracks}
+                      keyExtractor={item => item.id}
+                      showsHorizontalScrollIndicator={false}
+                      renderItem={({ item }) => <SquareCard item={item} onPress={() => openDetail(item)} />}
+                      style={{ marginBottom: 30 }}
+                    />
+
+                    <Text style={styles.sectionTitle}>Jump back in</Text>
+                    <FlatList
+                      horizontal
+                      data={[...recentTracks].reverse()}
+                      keyExtractor={item => item.id + 'rev'}
+                      showsHorizontalScrollIndicator={false}
+                      renderItem={({ item }) => <SquareCard item={item} title="Daily Mix 1" onPress={() => openDetail(item)} />}
+                    />
+                  </ScrollView>
+                )}
+
+                {activeTab === 'search' && (
+                  <View style={{ flex: 1 }}>
+                    {(!isDesktop && !(Platform.OS === 'web' && isTabletOrWebSplit)) && (
+                      <View style={styles.floatingMenuBtn}>
+                        <Pressable onPress={() => setSidebarVisible(true)}>
+                          <Ionicons name="menu" size={28} color={Colors.text} />
+                        </Pressable>
+                      </View>
+                    )}
+                    <SearchView onPlay={() => { }} />
                   </View>
+                )}
 
-                  <Text style={styles.sectionTitle}>New Releases</Text>
-                  <FlatList
-                    horizontal
-                    data={recentTracks}
-                    keyExtractor={item => item.id}
-                    showsHorizontalScrollIndicator={false}
-                    renderItem={({ item }) => <SquareCard item={item} onPress={() => openDetail(item)} />}
-                    contentContainerStyle={{ paddingHorizontal: 16 }}
-                    style={{ marginBottom: 30 }}
-                  />
-
-                  <Text style={styles.sectionTitle}>Jump back in</Text>
-                  <FlatList
-                    horizontal
-                    data={[...recentTracks].reverse()}
-                    keyExtractor={item => item.id + 'rev'}
-                    showsHorizontalScrollIndicator={false}
-                    renderItem={({ item }) => <SquareCard item={item} title="Daily Mix 1" onPress={() => openDetail(item)} />}
-                    contentContainerStyle={{ paddingHorizontal: 16 }}
-                  />
-                </ScrollView>
-              )}
-
-              {/* --- PESTAÑA SEARCH --- */}
-              {activeTab === 'search' && (
-                <View style={{ flex: 1 }}>
-                  <View style={{ position: 'absolute', top: 50, right: 20, zIndex: 10 }}>
-                    <Pressable onPress={() => setSidebarVisible(true)}>
-                      <Ionicons name="menu" size={28} color={Colors.text} />
-                    </Pressable>
+                {activeTab === 'library' && (
+                  <View style={{ flex: 1 }}>
+                    {(!isDesktop && !(Platform.OS === 'web' && isTabletOrWebSplit)) && (
+                      <View style={styles.floatingMenuBtn}>
+                        <Pressable onPress={() => setSidebarVisible(true)}>
+                          <Ionicons name="menu" size={28} color={Colors.text} />
+                        </Pressable>
+                      </View>
+                    )}
+                    <LibraryView onPlay={handlePlayTrack} />
                   </View>
-                  <SearchView onPlay={() => { }} />
-                </View>
-              )}
+                )}
 
-              {/* --- PESTAÑA LIBRARY --- */}
-              {activeTab === 'library' && (
-                <View style={{ flex: 1 }}>
-                  <View style={{ position: 'absolute', top: 50, right: 20, zIndex: 10 }}>
-                    <Pressable onPress={() => setSidebarVisible(true)}>
-                      <Ionicons name="menu" size={28} color={Colors.text} />
-                    </Pressable>
-                  </View>
-                  <LibraryView onPlay={handlePlayTrack} />
-                </View>
-              )}
-
-              {activeTab === 'liked' && (
-                <PlaceholderView title="Liked Songs" onOpenSidebar={() => setSidebarVisible(true)} />
-              )}
-              {activeTab === 'create' && (
-                <PlaceholderView title="Create Playlist" onOpenSidebar={() => setSidebarVisible(true)} />
-              )}
-            </>
-          )}
+                {activeTab === 'liked' && <PlaceholderView title="Liked Songs" onOpenSidebar={() => setSidebarVisible(true)} />}
+                {activeTab === 'create' && <PlaceholderView title="Create Playlist" onOpenSidebar={() => setSidebarVisible(true)} />}
+              </>
+            )}
+          </View>
 
           {!selectedItem && (
             <LinearGradient colors={['rgba(0,0,0,0.6)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 100, pointerEvents: 'none' }} />
           )}
 
           {!isDesktop && track && (
-            <View style={styles.miniPlayerContainer}>
+            <View style={[styles.miniPlayerContainer, Platform.OS === 'web' && { bottom: 20, maxWidth: 500, alignSelf: 'center' }]}>
               <MiniPlayer
                 track={track}
                 isPlaying={isPlaying}
@@ -187,12 +208,12 @@ export default function HomeScreen() {
                 onPress={() => setRightSidebarVisible(true)}
                 position={position}
                 duration={duration}
-                hasBottomNav={true}
+                hasBottomNav={!isDesktop && !(Platform.OS === 'web')}
               />
             </View>
           )}
 
-          {!isDesktop && !selectedItem && (
+          {!isDesktop && Platform.OS !== 'web' && !selectedItem && (
             <View style={styles.bottomNav}>
               <Pressable style={styles.navItem} onPress={() => setActiveTab('home')}>
                 <Ionicons name={activeTab === 'home' ? "home" : "home-outline"} size={26} color="white" />
@@ -214,17 +235,25 @@ export default function HomeScreen() {
           <RightSidebar track={track} isPlaying={isPlaying} onToggle={togglePlayPause} position={position} duration={duration} />
         ) : (
           <>
-            <Modal animationType="slide" visible={isRightSidebarVisible} onRequestClose={() => setRightSidebarVisible(false)} statusBarTranslucent={true}>
-              <RightSidebar
-                track={track}
-                isPlaying={isPlaying}
-                onToggle={togglePlayPause}
-                isMobile
-                onClose={() => setRightSidebarVisible(false)}
-                position={position}
-                duration={duration}
-                onDevicePress={() => setDevicePickerVisible(true)}
-              />
+            <Modal
+              animationType="slide"
+              visible={isRightSidebarVisible}
+              onRequestClose={() => setRightSidebarVisible(false)}
+              statusBarTranslucent={true}
+              transparent={Platform.OS === 'web'}
+            >
+              <View style={Platform.OS === 'web' ? styles.webModalCenter : { flex: 1 }}>
+                <RightSidebar
+                  track={track}
+                  isPlaying={isPlaying}
+                  onToggle={togglePlayPause}
+                  isMobile
+                  onClose={() => setRightSidebarVisible(false)}
+                  position={position}
+                  duration={duration}
+                  onDevicePress={() => setDevicePickerVisible(true)}
+                />
+              </View>
             </Modal>
             <Modal animationType="slide" visible={isDevicePickerVisible} onRequestClose={() => setDevicePickerVisible(false)} statusBarTranslucent={true} transparent>
               <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
@@ -242,27 +271,32 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#121212', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
   container: { flex: 1, flexDirection: 'row' },
   mainContent: { flex: 1, position: 'relative' },
-  headerRow: { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 20, gap: 12 },
+  webWrapper: { flex: 1, width: '100%', alignSelf: 'center' },
+
+  headerRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 20, gap: 12 },
   profileIcon: { width: 35, height: 35, borderRadius: 17.5, backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center' },
+  floatingMenuBtn: { position: 'absolute', top: 50, right: 20, zIndex: 10 },
   filterContainer: { flexDirection: 'row', gap: 8 },
-  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 24 },
-  sectionTitle: { color: 'white', fontSize: 22, fontWeight: '700', marginLeft: 16, marginBottom: 16 },
+
+  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 24 },
+  sectionTitle: { color: 'white', fontSize: 22, fontWeight: '700', marginBottom: 16 },
+
   miniPlayerContainer: { position: 'absolute', bottom: 10, left: 8, right: 8, borderRadius: 8, zIndex: 50 },
+
   bottomNav: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.95)',
-    height: 100,
-    borderTopWidth: 0,
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingBottom: 35,
-    paddingTop: 10,
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    zIndex: 40
+    flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.95)', height: 90, borderTopWidth: 0,
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    paddingBottom: Platform.OS === 'ios' ? 25 : 15, paddingTop: 10,
+    justifyContent: 'space-around', alignItems: 'center', zIndex: 40
   },
   navItem: { alignItems: 'center', justifyContent: 'center' },
   navLabel: { color: '#B3B3B3', fontSize: 10, marginTop: 4 },
+
+  webModalCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    paddingVertical: 40
+  }
 });
